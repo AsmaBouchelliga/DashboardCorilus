@@ -18,11 +18,11 @@ namespace DashBoard1.Controllers
         }
 
         [HttpGet("rejected-attestations")]
-        public async Task<IActionResult> GetRejectedAttestationsAsync()
+        public async Task<IActionResult> GetRejectedAttestationsAsync(Guid userId)
         {
             try
             {
-                var (count, totalAmount) = await _rejectedStatsService.GetRejectedAttestationsAsync();
+                var (count, totalAmount) = await _rejectedStatsService.GetRejectedAttestationsAsync(userId);
                 return Ok(new { Count = count, TotalAmount = totalAmount });
             }
             catch (Exception ex)
