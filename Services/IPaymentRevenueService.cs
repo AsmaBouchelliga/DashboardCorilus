@@ -1,9 +1,14 @@
-﻿namespace DashBoard1.Services
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using static DashBoard1.Controllers.PaymentRevenueController;
+
+namespace DashBoard1.Services
 {
     public interface IPaymentRevenueService
     {
-        Task<IEnumerable<object>> GetRevenueByPayerAsync(Guid userId);
-        Task<IEnumerable<object>> GetTotalSessionRevenueAsync(Guid userId);
-        Task<IEnumerable<object>> GetBalanceByPayerAsync(Guid userId);
+        Task<IEnumerable<RevenueByPayerDto>> GetRevenueByPayerAsync(Guid userId, DateTime startDate, DateTime endDate);
+        Task<IEnumerable<TotalSessionRevenueDto>> GetTotalSessionRevenueAsync(Guid userId, DateTime startDate, DateTime endDate);
+        Task<IEnumerable<BalanceByPayerDto>> GetBalanceByPayerAsync(Guid userId, DateTime startDate, DateTime endDate);
     }
 }

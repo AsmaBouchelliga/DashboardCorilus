@@ -25,9 +25,20 @@ namespace DashBoard1
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll",
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin()
+                               .AllowAnyMethod()
+                               .AllowAnyHeader();
+                    });
+            });
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IPaymentRevenueService, PaymentRevenueService>();
             services.AddScoped<IRejectedStatsService, RejectedStatsService>();
+            services.AddScoped<IUserService, UserService>();
             services.AddSingleton<IConfiguration>(Configuration);
 
             services.AddDbContext<AppDbContext>(options =>
@@ -56,6 +67,7 @@ namespace DashBoard1
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Test v1"));
+                app.UseCors("AllowAll");
 
             }
             else

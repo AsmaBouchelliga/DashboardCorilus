@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using DashBoard1.Services;
-using DashBoard1.Models;
 
 namespace DashBoard1.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("[controller]")]
     public class RejectedStatsController : ControllerBase
     {
         private readonly IRejectedStatsService _rejectedStatsService;
@@ -17,45 +17,49 @@ namespace DashBoard1.Controllers
             _rejectedStatsService = rejectedStatsService;
         }
 
-        [HttpGet("rejected-attestations")]
-        public async Task<IActionResult> GetRejectedAttestationsAsync(Guid userId)
+        public class CombinedReportDto
+        {
+            public int NbAttest { get; set; }
+            public decimal MontantTotalAttestedSessions { get; set; }
+            public int NbInvoices { get; set; }
+            public decimal MontantTotalElectronicInvoices { get; set; }
+        }
+
+        [HttpGet("combined-report")]
+        public async Task<IActionResult> GetCombinedReport(Guid userId, DateTime startDate, DateTime endDate)
+        {
+            var result = await _rejectedStatsService.GetCombinedReportAsync(userId, startDate, endDate);
+            return Ok(new CombinedReportDto
+            {
+                NbAttest = result.nbAttest,
+                MontantTotalAttestedSessions = result.montantTotalAttestedSessions,
+                NbInvoices = result.nbInvoices,
+                MontantTotalElectronicInvoices = result.montantTotalElectronicInvoices
+            });
+        }
+        public class NomenclatureStatsDto
+        {
+            public string NomenclatureCode { get; set; }
+            public int Nombre { get; set; }
+            public decimal MontantTotal { get; set; }
+        }
+
+
+        [HttpGet("top-nomenclature-stats")]
+        public async Task<ActionResult<IEnumerable<NomenclatureStatsDto>>> GetTop10NomenclatureStats(Guid userId, DateTime startDate, DateTime endDate)
         {
             try
             {
-                var (count, totalAmount) = await _rejectedStatsService.GetRejectedAttestationsAsync(userId);
-                return Ok(new { Count = count, TotalAmount = totalAmount });
+                var result = await _rejectedStatsService.GetTop10NomenclatureStatsAsync(userId, startDate, endDate);
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Une erreur s'est produite : {ex.Message}");
+                return StatusCode(500, $"Une erreur s'est produite lors de la récupération des données : {ex.Message}");
             }
         }
 
-        [HttpGet("rejected-invoices")]
-        public async Task<IActionResult> GetRejectedInvoicesAsync(Guid userId)
-        {
-            try
-            {
-                var (count, totalAmount) = await _rejectedStatsService.GetRejectedInvoicesAsync(userId);
-                return Ok(new { Count = count, TotalAmount = totalAmount });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Une erreur s'est produite : {ex.Message}");
-            }
-        }
-        [HttpGet("top-10-nomenclature-stats")]
-        public async Task<IActionResult> GetTop10NomenclatureStatsAsync(Guid userId)
-        {
-            try
-            {
-                var topNomenclatureStats = await _rejectedStatsService.GetTop10NomenclatureStatsAsync(userId);
-                return Ok(topNomenclatureStats);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Une erreur s'est produite : {ex.Message}");
-            }
-        }
+
+
     }
 }

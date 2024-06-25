@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DashBoard1.Data;
 using DashBoard1.Models;
 using Microsoft.EntityFrameworkCore;
+using static DashBoard1.Controllers.PaymentController;
 
 namespace DashBoard1.Services
 {
@@ -17,40 +18,37 @@ namespace DashBoard1.Services
             _context = context;
         }
 
-        public async Task<IEnumerable<object>> GetTotalPaymentsAsync(Guid userId)
+        public async Task<IEnumerable<PaymentDto>> GetTotalPaymentsAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
             try
             {
                 var totalPayments = await _context.Payments
-                    .Where(p => p.PaymentMode != -1)
+                    .Where(p => p.PaymentMode != -1 && p.PaymentDate >= startDate && p.PaymentDate <= endDate)
                     .Select(p => new
                     {
-                        Type_Payment = p.PaymentMode == 1 ? "Cash" :
-                                       p.PaymentMode == 2 ? "Bancontact" :
-                                       p.PaymentMode == 3 ? "Virement" :
-                                       "Autre",
+                        TypePayment = p.PaymentMode == 1 ? "Cash" :
+                                      p.PaymentMode == 2 ? "Bancontact" :
+                                      p.PaymentMode == 3 ? "Virement" :
+                                      "Autre",
                         p.Amount
                     })
                     .ToListAsync();
 
-                var groupedPayments = totalPayments.GroupBy(p => p.Type_Payment)
-                                                   .Select(g => new
+                var groupedPayments = totalPayments.GroupBy(p => p.TypePayment)
+                                                   .Select(g => new PaymentDto
                                                    {
-                                                       Type_Payment = g.Key,
-                                                       paiement_recu = g.Sum(p => p.Amount)
+                                                       TypePayment = g.Key,
+                                                       PaiementRecu = g.Sum(p => p.Amount)
                                                    })
-                                                   .OrderBy(p => p.Type_Payment); // Tri par ordre alphabétique du type de paiement
+                                                   .OrderBy(p => p.TypePayment);
 
                 return groupedPayments;
             }
             catch (Exception ex)
             {
-                // Gérer les exceptions ici
                 throw ex;
             }
         }
-
-
 
     }
 }

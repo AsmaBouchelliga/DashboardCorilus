@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using DashBoard1.Data;
 using Microsoft.EntityFrameworkCore;
+using static DashBoard1.Controllers.PaymentRevenueController;
 
 namespace DashBoard1.Services
 {
@@ -15,121 +16,82 @@ namespace DashBoard1.Services
             _context = context;
         }
 
-
-        public async Task<IEnumerable<object>> GetRevenueByPayerAsync(Guid userId)
+        public async Task<IEnumerable<RevenueByPayerDto>> GetRevenueByPayerAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
-            try
-            {
-                var revenueByPayer = await _context.Payments
-                    .Join(
-                        _context.AttestedSessions,
-                        payment => payment.AttestId,
-                        attestedSession => attestedSession.AttestId,
-                        (payment, attestedSession) => new
-                        {
-                            Type_Payment = payment.PaymentMode == 1 ? "Cash" :
-                                           payment.PaymentMode == 2 ? "Bancontact" :
-                                           payment.PaymentMode == 3 ? "Virement" :
-                                           "Autre",
-                            Type_b = payment.Payer == 1 ? "Patient" :
-                                     payment.Payer == 4 ? "Mutuelle" :
-                                     "Autre",
-                            payment.Amount
-                        })
-                    .GroupBy(p => new { p.Type_b })
-                    .Select(g => new
+            var revenueByPayer = await _context.Payments
+                .Where(p => p.PaymentDate >= startDate && p.PaymentDate <= endDate)
+                .Join(
+                    _context.AttestedSessions,
+                    payment => payment.AttestId,
+                    attestedSession => attestedSession.AttestId,
+                    (payment, attestedSession) => new
                     {
-                        Type_b = g.Key.Type_b,
-                        Chiffre_Affaire = g.Sum(p => p.Amount)
+                        Type_b = payment.Payer == 1 ? "Patient" :
+                                 payment.Payer == 4 ? "Mutuelle" :
+                                 "Autre",
+                        payment.Amount
                     })
-                    .ToListAsync();
+                .GroupBy(p => p.Type_b)
+                .Select(g => new RevenueByPayerDto
+                {
+                    Type_b = g.Key,
+                    Chiffre_Affaire = g.Sum(p => p.Amount)
+                })
+                .ToListAsync();
 
-                return revenueByPayer;
-            }
-            catch (Exception ex)
-            {
-                // Gérer les exceptions ici
-                throw ex;
-            }
+            return revenueByPayer;
         }
 
-        public Task<IEnumerable<object>> GetTotalRevenueByPayerAsync()
+        public async Task<IEnumerable<TotalSessionRevenueDto>> GetTotalSessionRevenueAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
-            throw new NotImplementedException();
+            var totalSessionRevenue = await _context.Payments
+                .Where(p => p.PaymentDate >= startDate && p.PaymentDate <= endDate)
+                .Join(
+                    _context.AttestedSessions,
+                    payment => payment.AttestId,
+                    attestedSession => attestedSession.AttestId,
+                    (payment, attestedSession) => new
+                    {
+                        Type_b = payment.Payer == 1 ? "Patient" :
+                                 payment.Payer == 4 ? "Mutuelle" :
+                                 "Autre",
+                        attestedSession.TotalAmount
+                    })
+                .GroupBy(p => p.Type_b)
+                .Select(g => new TotalSessionRevenueDto
+                {
+                    Type_b = g.Key,
+                    Total_a_facturer = g.Sum(p => p.TotalAmount)
+                })
+                .ToListAsync();
+
+            return totalSessionRevenue;
         }
 
-        public async Task<IEnumerable<object>> GetTotalSessionRevenueAsync(Guid userId)
+        public async Task<IEnumerable<BalanceByPayerDto>> GetBalanceByPayerAsync(Guid userId, DateTime startDate, DateTime endDate)
         {
-            try
-            {
-                var totalSessionRevenue = await _context.Payments
-                    .Join(
-                        _context.AttestedSessions,
-                        payment => payment.AttestId,
-                        attestedSession => attestedSession.AttestId,
-                        (payment, attestedSession) => new
-                        {
-                            Type_Payment = payment.PaymentMode == 1 ? "Cash" :
-                                           payment.PaymentMode == 2 ? "Bancontact" :
-                                           payment.PaymentMode == 3 ? "Virement" :
-                                           "Autre",
-                            Type_b = payment.Payer == 1 ? "Patient" :
-                                     payment.Payer == 4 ? "Mutuelle" :
-                                     "Autre",
-                            payment.Amount,
-                            attestedSession.TotalAmount
-                        })
-                    .GroupBy(p => new { p.Type_b })
-                    .Select(g => new
-                    {
-                        Type_b = g.Key.Type_b,
-                        Total_a_facturer = g.Sum(p => p.TotalAmount)
-                    })
-                    .ToListAsync();
+            var balanceByPayer = await _context.Payments
+                .Where(p => p.PaymentDate >= startDate && p.PaymentDate <= endDate)
+                .Join(_context.AttestedSessions,
+                      payment => payment.AttestId,
+                      attestedSession => attestedSession.AttestId,
+                      (payment, attestedSession) => new
+                      {
+                          Type_b = payment.Payer == 1 ? "Patient" :
+                                   payment.Payer == 4 ? "Mutuelle" :
+                                   "Autre",
+                          payment.Amount,
+                          attestedSession.TotalAmount
+                      })
+                .GroupBy(p => p.Type_b)
+                .Select(g => new BalanceByPayerDto
+                {
+                    Type_b = g.Key,
+                    Solde_du = g.Sum(p => p.TotalAmount) - g.Sum(p => p.Amount)
+                })
+                .ToListAsync();
 
-                return totalSessionRevenue;
-            }
-            catch (Exception ex)
-            {
-                // Gérer les exceptions ici
-                throw ex;
-            }
-        }
-        public async Task<IEnumerable<object>> GetBalanceByPayerAsync(Guid userId)
-        {
-            try
-            {
-                var balanceByPayer = await _context.Payments
-                    .Join(_context.AttestedSessions,
-                          payment => payment.AttestId,
-                          attestedSession => attestedSession.AttestId,
-                          (payment, attestedSession) => new
-                          {
-                              Type_Payment = payment.PaymentMode == 1 ? "Cash" :
-                                             payment.PaymentMode == 2 ? "Bancontact" :
-                                             payment.PaymentMode == 3 ? "Virement" :
-                                             "Autre",
-                              Type_b = payment.Payer == 1 ? "Patient" :
-                                       payment.Payer == 4 ? "Mutuelle" :
-                                       "Autre",
-                              payment.Amount,
-                              attestedSession.TotalAmount
-                          })
-                    .GroupBy(p => new { p.Type_b })
-                    .Select(g => new
-                    {
-                        Type_b = g.Key.Type_b,
-                        Solde_du = g.Sum(p => p.TotalAmount) - g.Sum(p => p.Amount)
-                    })
-                    .ToListAsync();
-
-                return balanceByPayer;
-            }
-            catch (Exception ex)
-            {
-                // Gérer les exceptions ici
-                throw ex;
-            }
+            return balanceByPayer;
         }
 
     }
